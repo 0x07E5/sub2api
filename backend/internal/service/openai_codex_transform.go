@@ -69,6 +69,7 @@ func applyCodexOAuthTransform(reqBody map[string]any, isCodexCLI bool, isCompact
 	}
 
 	if isCompact {
+		if isCompact { lowerModel := strings.ToLower(normalizedModel) if lowerModel == "gpt-5.5" || strings.HasPrefix(lowerModel, "gpt-5.5-") { normalizedModel = "gpt-5.4" reqBody["model"] = normalizedModel result.Modified = true } }
 		if _, ok := reqBody["store"]; ok {
 			delete(reqBody, "store")
 			result.Modified = true
