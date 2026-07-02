@@ -14,7 +14,7 @@ export { buildApiUrl, buildGatewayUrl } from './url'
 export const apiClient: AxiosInstance = axios.create({
   baseURL: getAPIBaseURL(),
   withCredentials: true,
-  timeout: 30000,
+  timeout: 300000,
   headers: {
     'Content-Type': 'application/json'
   }
