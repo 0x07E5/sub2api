@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
 func TestParseCodexSessionImportEntriesSupportsRawTokenJSONAndArray(t *testing.T) {
@@ -304,6 +306,23 @@ func TestCodexIdentityKeysPreferStrongIdentifiers(t *testing.T) {
 		if strings.HasPrefix(key, "email:") {
 			t.Fatalf("strong identity should not include email fallback: %v", keys)
 		}
+		if key == "account:acct-1" {
+			t.Fatalf("user identity should not include shared account key: %v", keys)
+		}
+	}
+
+	keys = buildCodexIdentityKeys("acct-1", "", "same@example.com", "token")
+	hasAccount := false
+	for _, key := range keys {
+		if key == "account:acct-1" {
+			hasAccount = true
+		}
+		if strings.HasPrefix(key, "email:") {
+			t.Fatalf("account fallback should not include email key: %v", keys)
+		}
+	}
+	if !hasAccount {
+		t.Fatalf("missing account fallback key: %v", keys)
 	}
 
 	keys = buildCodexIdentityKeys("", "", "same@example.com", "token")
@@ -315,6 +334,29 @@ func TestCodexIdentityKeysPreferStrongIdentifiers(t *testing.T) {
 	}
 	if !hasEmail {
 		t.Fatalf("weak identity should include email fallback: %v", keys)
+	}
+}
+
+func TestCodexAccountIndexDoesNotMatchDifferentUsersInSameChatGPTAccount(t *testing.T) {
+	existing := service.Account{
+		ID: 10,
+		Credentials: map[string]any{
+			"chatgpt_account_id": "team-1",
+			"chatgpt_user_id":    "user-1",
+			"access_token":       "token-1",
+		},
+	}
+	index := buildCodexAccountIndex([]service.Account{existing})
+
+	keys := buildCodexIdentityKeys("team-1", "user-2", "user2@example.com", "token-2")
+	if got := index.Find(keys); got != nil {
+		t.Fatalf("Find matched account ID %d for a different chatgpt_user_id in the same team", got.ID)
+	}
+
+	keys = buildCodexIdentityKeys("team-1", "user-1", "user1@example.com", "token-2")
+	got := index.Find(keys)
+	if got == nil || got.ID != existing.ID {
+		t.Fatalf("Find by same chatgpt_user_id = %v, want account ID %d", got, existing.ID)
 	}
 }
 
